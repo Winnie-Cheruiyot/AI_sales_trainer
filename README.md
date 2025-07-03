@@ -6,6 +6,8 @@ An AI-powered voice coach that listens to sales pitches and gives instant feedba
 
 ## 🚀 Features
 
+- check here (https://ai-sales-trainer.streamlit.app/)
+  
 - 🎙️ **Voice Input**  
   Speak directly into the app or upload a recorded pitch.
 
