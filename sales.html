@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Sales Trainer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .button {
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+        .record-button {
+            background-color: #ef4444; /* Red-500 */
+            color: white;
+        }
+        .record-button:hover {
+            background-color: #dc2626; /* Red-600 */
+        }
+        .stop-button {
+            background-color: #f97316; /* Orange-500 */
+            color: white;
+        }
+        .stop-button:hover {
+            background-color: #ea580c; /* Orange-600 */
+        }
+        .process-button {
+            background-color: #10b981; /* Green-500 */
+            color: white;
+        }
+        .process-button:hover {
+            background-color: #059669; /* Green-600 */
+        }
+        .play-button {
+            background-color: #3b82f6; /* Blue-500 */
+            color: white;
+        }
+        .play-button:hover {
+            background-color: #2563eb; /* Blue-600 */
+        }
+        .disabled-button {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .card {
+            background-color: #f9fafb; /* Gray-50 */
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb; /* Gray-200 */
+        }
+        .card-title {
+            font-weight: 700;
+            color: #374151; /* Gray-700 */
+            margin-bottom: 15px;
+        }
+        #transcript-display, #feedback-display {
+            min-height: 100px;
+            border: 1px solid #d1d5db; /* Gray-300 */
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #ffffff;
+            line-height: 1.6;
+            color: #4b5563; /* Gray-600 */
+            font-size: 0.95rem;
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            word-wrap: break-word; /* Break long words */
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Styles for the new upgrade modal - removed as no backend */
+        #upgradeModal {
+            display: none; /* Ensure it's hidden */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="container">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">AI Sales Trainer 🚀</h1>
+
+        <div class="text-center text-sm text-gray-600 mb-4">
+            <p id="auth-status">Client-side mode (no user tracking)</p>
+            <p id="feedback-credits">Unlimited Feedback (client-side AI)</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <button id="recordButton" class="button record-button" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path d="M8.25 4.5a3.75 3.75 0 1 1 7.5 0v8.25a3.75 3.75 0 1 1-7.5 0V4.5Z" />
+                    <path d="M6 10.5a.75.75 0 0 1 .75.75v1.5a5.25 5.25 0 1 0 10.5 0v-1.5a.75.75 0 0 1 1.5 0v1.5a6.751 6.751 0 0 1-6 6.709v2.291h3a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1 0-1.5h3v-2.291a6.751 6.751 0 0 1-6-6.709v-1.5A.75.75 0 0 1 6 10.5Z" />
+                </svg>
+                Start Recording
+            </button>
+            <button id="stopButton" class="button stop-button disabled-button" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M6.75 5.25A.75.75 0 0 1 7.5 4.5h9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75h-9a.75.75 0 0 1-.75-.75V5.25Z" clip-rule="evenodd" />
+                </svg>
+                Stop Recording
+            </button>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title text-xl">Your Sales Pitch Transcript:</h2>
+            <div id="transcript-display" class="relative">
+                <span id="initial-transcript-message" class="text-gray-400">Your transcribed pitch will appear here...</span>
+                <span id="live-transcript" class="text-gray-600"></span>
+            </div>
+        </div>
+
+        <button id="processPitchButton" class="button process-button disabled-button" disabled>
+            <span id="process-button-text">Analyze Pitch</span>
+            <div id="process-spinner" class="hidden loading-spinner"></div>
+        </button>
+
+        <div class="card">
+            <h2 class="card-title text-xl">AI Coach Feedback:</h2>
+            <div id="feedback-display" class="relative">
+                <span id="initial-feedback-message" class="text-gray-400">AI feedback will appear here after analysis...</span>
+                <span id="feedback-text" class="text-gray-600"></span>
+            </div>
+            <button id="playFeedbackButton" class="button play-button mt-4 disabled-button" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.568 0 3.28l-11.54 6.347c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" />
+                </svg>
+                Play Feedback
+            </button>
+        </div>
+
+        <!-- Custom Alert Modal (for general alerts) -->
+        <div id="alertModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full relative">
+                <h3 class="text-lg font-bold text-gray-800 mb-4" id="alertTitle"></h3>
+                <p class="text-gray-700 mb-6" id="alertMessage"></p>
+                <button id="alertCloseButton" class="button process-button w-full">Got It</button>
+            </div>
+        </div>
+
+        <!-- Upgrade Modal (removed as no backend) -->
+        <div id="upgradeModal" style="display: none;"></div>
+
+    </div>
+
+    <script>
+        // IMPORTANT: Place your Gemini API Key directly here for client-side usage.
+        // WARNING: This exposes your API key in the frontend. Use with caution.
+        const GEMINI_API_KEY = "AIzaSyDFjPqo1X_QJGZ13Zxo7ojDVX0o2-W8jeA"; // <--- REPLACE WITH YOUR ACTUAL GEMINI API KEY
+
+        // Check if API key is set
+        const isApiKeySet = (GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE");
+
+        // Get references to DOM elements
+        const recordButton = document.getElementById('recordButton');
+        const stopButton = document.getElementById('stopButton');
+        const processPitchButton = document.getElementById('processPitchButton');
+        const playFeedbackButton = document.getElementById('playFeedbackButton');
+        const transcriptDisplay = document.getElementById('transcript-display');
+        const liveTranscript = document.getElementById('live-transcript');
+        const initialTranscriptMessage = document.getElementById('initial-transcript-message');
+        const initialFeedbackMessage = document.getElementById('initial-feedback-message');
+        const feedbackDisplay = document.getElementById('feedback-text');
+        const processButtonText = document.getElementById('process-button-text');
+        const processSpinner = document.getElementById('process-spinner');
+        const authStatusElement = document.getElementById('auth-status');
+        const feedbackCreditsElement = document.getElementById('feedback-credits');
+
+        // Alert modal elements
+        const alertModal = document.getElementById('alertModal');
+        const alertTitle = document.getElementById('alertTitle');
+        const alertMessage = document.getElementById('alertMessage');
+        const alertCloseButton = document.getElementById('alertCloseButton');
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let recognition;
+        let finalTranscript = '';
+        let aiFeedbackText = '';
+
+        // Function to display custom alerts instead of alert()
+        function showAlert(title, message) {
+            console.log(`showAlert called: Title="${title}", Message="${message}"`);
+            alertTitle.textContent = title;
+            alertMessage.textContent = message;
+            alertModal.classList.remove('hidden'); // Ensure it's visible
+            alertModal.style.display = 'flex'; // Explicitly set display to flex
+        }
+
+        // Close general alert modal
+        alertCloseButton.addEventListener('click', () => {
+            console.log('Alert modal close button clicked. Hiding modal.');
+            alertModal.classList.add('hidden'); // Hide it using Tailwind's hidden
+            alertModal.style.display = 'none'; // Explicitly set display to none
+        });
+
+        // Initialize Web Speech API Recognition
+        function initializeSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showAlert('Browser Not Supported', 'Your browser does not support the Web Speech API. Please try Chrome or Edge for full functionality.');
+                recordButton.disabled = true;
+                recordButton.classList.add('disabled-button');
+                return null;
+            }
+
+            recognition = new (window.webkitSpeechRecognition || window.SpeechRecognition)();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                initialTranscriptMessage.classList.add('hidden');
+                liveTranscript.textContent = finalTranscript + interimTranscript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech Recognition Error:', event.error);
+                if (event.error === 'not-allowed') {
+                    showAlert('Microphone Access Denied', 'Please allow microphone access in your browser settings to use the speech recognition feature.');
+                } else if (event.error === 'no-speech') {
+                    console.log('No speech detected, recognition might have stopped.');
+                } else {
+                    showAlert('Speech Recognition Error', `An error occurred during speech recognition: ${event.error}.`);
+                }
+                stopRecordingLogic(); // Ensure recording state is reset on error
+            };
+
+            recognition.onend = () => {
+                console.log('Speech Recognition Ended.');
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    stopRecordingLogic();
+                }
+            };
+            return recognition;
+        }
+
+        // Initial setup for buttons and messages
+        function initialSetup() {
+            authStatusElement.textContent = `Client-side mode (no user tracking)`;
+            feedbackCreditsElement.textContent = `Unlimited Feedback (client-side AI)`;
+            recordButton.disabled = false;
+            recordButton.classList.remove('disabled-button');
+
+            // If Gemini API key is missing, disable process button
+            if (!isApiKeySet) {
+                processPitchButton.disabled = true;
+                processPitchButton.classList.add('disabled-button');
+                showAlert('API Key Missing', 'Please set your Gemini API key in the HTML file to enable AI feedback.');
+            }
+        }
+
+        // Run initial setup and speech recognition initialization
+        initialSetup();
+        recognition = initializeSpeechRecognition();
+
+
+        // Start Recording function
+        recordButton.addEventListener('click', async () => {
+            if (!recognition) {
+                showAlert('Initialization Error', 'Speech recognition is not initialized. Please ensure your browser supports the Web Speech API.');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                finalTranscript = '';
+
+                initialTranscriptMessage.classList.remove('hidden');
+                liveTranscript.textContent = '';
+                initialFeedbackMessage.classList.remove('hidden');
+                feedbackDisplay.textContent = '';
+                processPitchButton.classList.add('disabled-button');
+                processPitchButton.disabled = true;
+                playFeedbackButton.classList.add('disabled-button');
+                playFeedbackButton.disabled = true;
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    console.log('Audio recording stopped. Blob size:', audioBlob.size);
+                };
+
+                mediaRecorder.start();
+                recognition.start();
+
+                recordButton.classList.add('disabled-button');
+                recordButton.disabled = true;
+                stopButton.classList.remove('disabled-button');
+                stopButton.disabled = false;
+                processPitchButton.classList.add('disabled-button');
+                processPitchButton.disabled = true;
+                playFeedbackButton.classList.add('disabled-button');
+                playFeedbackButton.disabled = true;
+
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                showAlert('Microphone Error', 'Could not access your microphone. Please ensure it is connected and access is granted.');
+                stopRecordingLogic(); // Reset buttons even if mic access fails
+            }
+        });
+
+        // Stop Recording function
+        stopButton.addEventListener('click', () => {
+            stopRecordingLogic();
+        });
+
+        function stopRecordingLogic() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            if (recognition && recognition.recognizing) {
+                recognition.stop();
+            }
+
+            recordButton.classList.remove('disabled-button');
+            recordButton.disabled = false;
+            stopButton.classList.add('disabled-button');
+            stopButton.disabled = true;
+
+            // Re-evaluate process button state after stopping recording
+            if (finalTranscript.trim().length > 0 && isApiKeySet) { // Check if API key is available
+                processPitchButton.classList.remove('disabled-button');
+                processPitchButton.disabled = false;
+            } else if (finalTranscript.trim().length === 0) {
+                showAlert('No Speech Detected', 'No speech was detected. Please ensure your microphone is working and you are speaking clearly.');
+                processPitchButton.classList.add('disabled-button');
+                processPitchButton.disabled = true;
+            }
+        }
+
+        // Process Pitch function (send transcript to Gemini API directly)
+        processPitchButton.addEventListener('click', async () => {
+            if (finalTranscript.trim().length === 0) {
+                showAlert('No Pitch to Analyze', 'Please record or type your pitch before analyzing.');
+                return;
+            }
+
+            if (!isApiKeySet) {
+                showAlert('API Key Missing', 'Gemini API is not initialized. Please set your Gemini API key in the HTML file.');
+                return;
+            }
+
+            processButtonText.textContent = 'Analyzing...';
+            processSpinner.classList.remove('hidden');
+            processPitchButton.disabled = true;
+            processPitchButton.classList.add('disabled-button');
+            initialFeedbackMessage.classList.add('hidden');
+            feedbackDisplay.textContent = '';
+            playFeedbackButton.classList.add('disabled-button');
+            playFeedbackButton.disabled = true;
+
+            const prompt = `You are an AI sales coach specializing in helping small vendors improve their pitches.
+Analyze the following sales pitch for:
+1.  **Tone:** Is it confident, persuasive, empathetic, too aggressive, monotone, engaging?
+2.  **Clarity:** Is the message clear, concise, easy to understand, free of jargon?
+3.  **Structure:** Does it have a clear opening, problem identification, solution presentation, call to action, and logical flow?
+
+Provide specific, actionable tips for improvement for each of these three areas.
+Also, give an overall assessment and highlight one strength and one area for immediate improvement.
+
+Sales Pitch:
+"${finalTranscript}"
+
+Provide your feedback in a structured, easy-to-read format.`;
+
+            console.log("Sending prompt to Gemini API:", prompt); // Log the prompt being sent
+
+            try {
+                // Direct fetch call to Gemini API
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    aiFeedbackText = result.candidates[0].content.parts[0].text;
+                    feedbackDisplay.textContent = aiFeedbackText;
+                    playFeedbackButton.classList.remove('disabled-button');
+                    playFeedbackButton.disabled = false;
+                    console.log("AI Feedback received successfully."); // Log success
+                } else {
+                    showAlert('Analysis Error', "No feedback generated or unexpected API response structure.");
+                    aiFeedbackText = '';
+                    feedbackDisplay.textContent = 'Error getting feedback.';
+                    console.warn("AI returned empty feedback or unexpected structure:", result); // Log empty feedback
+                }
+            } catch (error) {
+                console.error('Error during pitch analysis (Gemini API call):', error); // More specific error log
+                showAlert('AI Service Error', `An error occurred while getting AI feedback: ${error.message}. Check your API key and network connection.`);
+                aiFeedbackText = '';
+                feedbackDisplay.textContent = 'Error connecting to AI service.';
+            } finally {
+                processButtonText.textContent = 'Analyze Pitch';
+                processSpinner.classList.add('hidden');
+                // Re-enable process button if API key is present and transcript exists
+                if (isApiKeySet && finalTranscript.trim().length > 0) {
+                    processPitchButton.classList.remove('disabled-button');
+                    processPitchButton.disabled = false;
+                } else {
+                    processPitchButton.classList.add('disabled-button');
+                    processPitchButton.disabled = true;
+                }
+            }
+        });
+
+        // Play Feedback function (Text-to-Speech)
+        playFeedbackButton.addEventListener('click', () => {
+            if (!aiFeedbackText) {
+                showAlert('No Feedback', 'There is no AI feedback to play.');
+                return;
+            }
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(aiFeedbackText);
+                utterance.lang = 'en-US';
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showAlert('Browser Not Supported', 'Your browser does not support Text-to-Speech.');
+            }
+        });
+    </script>
+</body>
+</html>
